@@ -9,6 +9,10 @@ public class MazeGenerator : MonoBehaviour
     [Header("Settings")]
     [SerializeField] private int gridSize = 21;
     [SerializeField] private float cellSize = 2f;
+    [SerializeField] private float secondsPerStep = 0.6f;
+    [SerializeField] private int simulationRuns = 200;
+
+    [SerializeReference] private MazeAlgorithm algorithm = new WilsonAlgorithm();
 
     [Header("References")]
     [SerializeField] private GameObject player;
@@ -20,6 +24,8 @@ public class MazeGenerator : MonoBehaviour
     {
         GenerateMaze();
         _exitCell = FindFarthestCell();
+        float timeLimit = RunAgentSimulations(simulationRuns) * secondsPerStep;
+        GameManager.Instance.StartGame(timeLimit);
         LogMazeSchema();
         BuildGeometry();
         PlaceActors();
@@ -44,63 +50,70 @@ public class MazeGenerator : MonoBehaviour
 
     private void GenerateMaze()
     {
-        _isWall = new bool[gridSize, gridSize];
-        for (int r = 0; r < gridSize; r++)
-            for (int c = 0; c < gridSize; c++)
-                _isWall[r, c] = true;
+        _isWall = algorithm.Generate(gridSize);
+    }
 
-        List<Vector2Int> cells = new List<Vector2Int>();
-        for (int r = 1; r < gridSize - 1; r += 2)
-            for (int c = 1; c < gridSize - 1; c += 2)
-                cells.Add(new Vector2Int(r, c));
+    private int RunAgentSimulations(int count)
+    {
+        int total = 0;
+        for (int i = 0; i < count; i++)
+            total += SimulateAgent();
+        return total / count;
+    }
 
-        bool[,] inMaze = new bool[gridSize, gridSize];
+    private int SimulateAgent()
+    {
+        int[] dr = { -1, 1, 0, 0 };
+        int[] dc = { 0, 0, -1, 1 };
 
-        Vector2Int seed = cells[Random.Range(0, cells.Count)];
-        inMaze[seed.x, seed.y] = true;
-        _isWall[seed.x, seed.y] = false;
-        int inMazeCount = 1;
+        bool[,] deadEnd = new bool[gridSize, gridSize];
+        bool[,] visited = new bool[gridSize, gridSize];
+        List<Vector2Int> path = new List<Vector2Int>();
 
-        int[] dr = { -2, 2, 0, 0 };
-        int[] dc = { 0, 0, -2, 2 };
+        path.Add(new Vector2Int(1, 1));
+        visited[1, 1] = true;
+        int steps = 0;
 
-        while (inMazeCount < cells.Count)
+        while (path[path.Count - 1] != _exitCell)
         {
-            Vector2Int walkStart = cells[Random.Range(0, cells.Count)];
-            while (inMaze[walkStart.x, walkStart.y])
-                walkStart = cells[Random.Range(0, cells.Count)];
+            Vector2Int current = path[path.Count - 1];
+            List<Vector2Int> unvisited = new List<Vector2Int>();
 
-            // Loop-erased random walk — overwriting next[cell] erases loops naturally
-            Dictionary<Vector2Int, Vector2Int> next = new Dictionary<Vector2Int, Vector2Int>();
-            Vector2Int current = walkStart;
-
-            while (!inMaze[current.x, current.y])
+            for (int d = 0; d < 4; d++)
             {
-                List<int> validDirs = new List<int>();
+                int nr = current.x + dr[d];
+                int nc = current.y + dc[d];
+                if (nr < 0 || nr >= gridSize || nc < 0 || nc >= gridSize) continue;
+                if (_isWall[nr, nc] || deadEnd[nr, nc] || visited[nr, nc]) continue;
+                unvisited.Add(new Vector2Int(nr, nc));
+            }
+
+            if (unvisited.Count > 0)
+            {
+                Vector2Int next = unvisited[Random.Range(0, unvisited.Count)];
+                path.Add(next);
+                visited[next.x, next.y] = true;
+                steps++;
+            }
+            else
+            {
+                int validExits = 0;
                 for (int d = 0; d < 4; d++)
                 {
                     int nr = current.x + dr[d];
                     int nc = current.y + dc[d];
-                    if (nr > 0 && nr < gridSize - 1 && nc > 0 && nc < gridSize - 1)
-                        validDirs.Add(d);
+                    if (nr < 0 || nr >= gridSize || nc < 0 || nc >= gridSize) continue;
+                    if (!_isWall[nr, nc] && !deadEnd[nr, nc]) validExits++;
                 }
-                int chosen = validDirs[Random.Range(0, validDirs.Count)];
-                next[current] = new Vector2Int(current.x + dr[chosen], current.y + dc[chosen]);
-                current = next[current];
-            }
+                if (validExits <= 1)
+                    deadEnd[current.x, current.y] = true;
 
-            // Trace walk path into the maze
-            current = walkStart;
-            while (!inMaze[current.x, current.y])
-            {
-                inMaze[current.x, current.y] = true;
-                _isWall[current.x, current.y] = false;
-                Vector2Int nextCell = next[current];
-                _isWall[(current.x + nextCell.x) / 2, (current.y + nextCell.y) / 2] = false;
-                current = nextCell;
-                inMazeCount++;
+                path.RemoveAt(path.Count - 1);
+                steps++;
             }
         }
+
+        return steps;
     }
 
     private Vector2Int FindFarthestCell()

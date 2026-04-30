@@ -6,7 +6,6 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [SerializeField] private float timeLimit = 180f;
     [SerializeField] private TextMeshProUGUI timerText;
     [SerializeField] private GameObject endPanel;
     [SerializeField] private TextMeshProUGUI endMessageText;
@@ -17,7 +16,11 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
-        _timeRemaining = timeLimit;
+    }
+
+    public void StartGame(float timeLimitSeconds)
+    {
+        _timeRemaining = timeLimitSeconds;
         IsPlaying = true;
     }
 
