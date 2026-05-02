@@ -5,8 +5,8 @@ using UnityEngine;
 [CustomEditor(typeof(MazeGenerator))]
 public class MazeGeneratorEditor : Editor
 {
-    private static readonly Type[] AlgorithmTypes = { typeof(DfsAlgorithm), typeof(WilsonAlgorithm) };
-    private static readonly string[] AlgorithmNames = { "DFS (Recursive Backtracker)", "Wilson's (Loop-Erased Random Walk)" };
+    private static readonly Type[] AlgorithmTypes = { typeof(DfsAlgorithm), typeof(WilsonAlgorithm), typeof(PrimsAlgorithm), typeof(KruskalsAlgorithm) };
+    private static readonly string[] AlgorithmNames = { "DFS (Recursive Backtracker)", "Wilson's (Loop-Erased Random Walk)", "Prim's", "Kruskal's" };
 
     public override void OnInspectorGUI()
     {
@@ -27,5 +27,10 @@ public class MazeGeneratorEditor : Editor
         DrawPropertiesExcluding(serializedObject, "algorithm", "m_Script");
 
         serializedObject.ApplyModifiedProperties();
+
+        if (!Application.isPlaying) return;
+        EditorGUILayout.Space();
+        if (GUILayout.Button("Regenerate Maze"))
+            ((MazeGenerator)target).Regenerate();
     }
 }

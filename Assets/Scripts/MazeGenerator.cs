@@ -22,6 +22,23 @@ public class MazeGenerator : MonoBehaviour
 
     private void Start()
     {
+        Run();
+    }
+
+    public void Regenerate()
+    {
+        foreach (Transform child in transform)
+            Destroy(child.gameObject);
+
+        ExitTrigger existingExit = FindFirstObjectByType<ExitTrigger>();
+        if (existingExit != null)
+            Destroy(existingExit.gameObject);
+
+        Run();
+    }
+
+    private void Run()
+    {
         GenerateMaze();
         _exitCell = FindFarthestCell();
         float timeLimit = RunAgentSimulations(simulationRuns) * secondsPerStep;
