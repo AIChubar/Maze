@@ -21,11 +21,18 @@ public class MazeGenerator : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private GameObject player;
+    [SerializeField] private FloorMarker floorMarker;
 
     private bool[,] _isWall;
     private Vector2Int _exitCell;
     private GameObject[,] _wallCubes;
     private bool _wallsReady;
+
+    private void OnValidate()
+    {
+        if (gridSize % 2 == 0) gridSize++;
+        gridSize = Mathf.Max(5, gridSize);
+    }
 
     private void Start()
     {
@@ -113,6 +120,16 @@ public class MazeGenerator : MonoBehaviour
         GameManager.Instance.StartGame(timeLimit);
         LogMazeSchema();
         PlaceActors();
+        SetMarkLimit();
+    }
+
+    private void SetMarkLimit()
+    {
+        int paintable = 0;
+        for (int r = 0; r < gridSize; r++)
+            for (int c = 0; c < gridSize; c++)
+                if (!_isWall[r, c]) paintable++;
+        floorMarker.SetMarkLimit(Mathf.RoundToInt(paintable / 10f / 10f) * 10);
     }
 
     private void LogMazeSchema()

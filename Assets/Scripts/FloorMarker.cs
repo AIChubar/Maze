@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -10,15 +12,28 @@ public class FloorMarker : MonoBehaviour
     [SerializeField] private Color secondaryColor = Color.red;
     [SerializeField] private float cellSize = 2f;
     [SerializeField] private float maxReach = 4f;
+    [SerializeField] private float paintDuration = 0.35f;
+    [SerializeField] private bool animatePaint = true;
     [SerializeField] private Transform cameraTransform;
+    [SerializeField] private TextMeshProUGUI markCountText;
 
     private readonly Dictionary<Vector2Int, GameObject> _marks = new Dictionary<Vector2Int, GameObject>();
+    private readonly HashSet<Vector2Int> _animating = new HashSet<Vector2Int>();
     private GameObject _preview;
+    private int _maxMarks;
+    private int _availableMarks;
 
     private void Start()
     {
         _preview = CreateQuad(Vector3.zero, MakeTransparentMaterial(new Color(1f, 1f, 1f, 0.4f)));
         _preview.SetActive(false);
+    }
+
+    public void SetMarkLimit(int limit)
+    {
+        _maxMarks = limit;
+        _availableMarks = limit;
+        UpdateMarkDisplay();
     }
 
     private void Update()
@@ -48,12 +63,82 @@ public class FloorMarker : MonoBehaviour
         _preview.SetActive(true);
         _preview.transform.position = CellToWorld(cell.Value);
 
-        if (Keyboard.current.eKey.wasPressedThisFrame)
+        if (Keyboard.current.eKey.wasPressedThisFrame && !_animating.Contains(cell.Value))
             Paint(cell.Value, primaryColor);
-        else if (Keyboard.current.fKey.wasPressedThisFrame)
+        else if (Keyboard.current.fKey.wasPressedThisFrame && !_animating.Contains(cell.Value))
             Paint(cell.Value, secondaryColor);
         else if (Keyboard.current.gKey.wasPressedThisFrame)
             Remove(cell.Value);
+    }
+
+    private void Paint(Vector2Int cell, Color color)
+    {
+        bool isOverwrite = _marks.ContainsKey(cell);
+        if (!isOverwrite && _availableMarks <= 0) return;
+
+        if (!isOverwrite)
+        {
+            _availableMarks--;
+            UpdateMarkDisplay();
+        }
+
+        if (animatePaint)
+        {
+            StartCoroutine(PaintAnimation(cell, color));
+            return;
+        }
+
+        if (_marks.TryGetValue(cell, out GameObject existing))
+        {
+            Destroy(existing);
+            _marks.Remove(cell);
+        }
+        _marks[cell] = CreateQuad(CellToWorld(cell), MakeMaterial(color));
+    }
+
+    private IEnumerator PaintAnimation(Vector2Int cell, Color color)
+    {
+        _animating.Add(cell);
+
+        if (_marks.TryGetValue(cell, out GameObject existing))
+        {
+            Destroy(existing);
+            _marks.Remove(cell);
+        }
+
+        Material animMat = MakeTransparentMaterial(new Color(color.r, color.g, color.b, 0f));
+        GameObject animQuad = CreateQuad(CellToWorld(cell), animMat, y: 0.04f);
+        animQuad.transform.localScale = Vector3.zero;
+
+        float fullScale = cellSize * 0.95f;
+        float overshootScale = fullScale * 1.15f;
+        float growDuration = paintDuration * 0.75f;
+        float settleDuration = paintDuration * 0.25f;
+        float elapsed = 0f;
+
+        while (elapsed < growDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / growDuration);
+            float size = Mathf.Lerp(0f, overshootScale, t);
+            animQuad.transform.localScale = new Vector3(size, size, 1f);
+            animMat.SetColor(BaseColorId, new Color(color.r, color.g, color.b, t));
+            yield return null;
+        }
+
+        elapsed = 0f;
+        while (elapsed < settleDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / settleDuration;
+            float size = Mathf.Lerp(overshootScale, fullScale, t);
+            animQuad.transform.localScale = new Vector3(size, size, 1f);
+            yield return null;
+        }
+
+        Destroy(animQuad);
+        _marks[cell] = CreateQuad(CellToWorld(cell), MakeMaterial(color));
+        _animating.Remove(cell);
     }
 
     private Vector2Int? GetPointedCell()
@@ -64,24 +149,25 @@ public class FloorMarker : MonoBehaviour
         return WorldToCell(hit.point);
     }
 
-    private void Paint(Vector2Int cell, Color color)
-    {
-        if (_marks.TryGetValue(cell, out GameObject existing))
-            Destroy(existing);
-        _marks[cell] = CreateQuad(CellToWorld(cell), MakeMaterial(color));
-    }
-
     private void Remove(Vector2Int cell)
     {
         if (!_marks.TryGetValue(cell, out GameObject existing)) return;
         Destroy(existing);
         _marks.Remove(cell);
+        _availableMarks = Mathf.Min(_availableMarks + 1, _maxMarks);
+        UpdateMarkDisplay();
     }
 
-    private GameObject CreateQuad(Vector3 position, Material mat)
+    private void UpdateMarkDisplay()
+    {
+        if (markCountText != null)
+            markCountText.text = $"Marks: {_availableMarks}/{_maxMarks}";
+    }
+
+    private GameObject CreateQuad(Vector3 position, Material mat, float y = 0.03f)
     {
         GameObject quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        quad.transform.position = position;
+        quad.transform.position = new Vector3(position.x, y, position.z);
         quad.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
         quad.transform.localScale = new Vector3(cellSize * 0.95f, cellSize * 0.95f, 1f);
         Destroy(quad.GetComponent<Collider>());

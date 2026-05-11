@@ -23,6 +23,19 @@ public class MazeGeneratorEditor : Editor
         if (EditorGUI.EndChangeCheck() || algorithmProp.managedReferenceValue == null)
             algorithmProp.managedReferenceValue = Activator.CreateInstance(AlgorithmTypes[newIndex]);
 
+        SerializedProperty child = algorithmProp.Copy();
+        SerializedProperty end = algorithmProp.GetEndProperty();
+        if (child.NextVisible(true))
+        {
+            EditorGUI.indentLevel++;
+            while (!SerializedProperty.EqualContents(child, end))
+            {
+                EditorGUILayout.PropertyField(child, true);
+                child.NextVisible(false);
+            }
+            EditorGUI.indentLevel--;
+        }
+
         EditorGUILayout.Space();
         DrawPropertiesExcluding(serializedObject, "algorithm", "m_Script");
 
