@@ -564,7 +564,7 @@ Transform:
   m_GameObject: {fileID: 410087039}
   serializedVersion: 2
   m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
+  m_LocalPosition: {x: 0, y: 2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -628,7 +628,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a57d16ceffb24e49a7bf023be0f5013, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  timeLimit: 180
   timerText: {fileID: 221663306}
   endPanel: {fileID: 918827655}
   endMessageText: {fileID: 1117727444}
@@ -658,6 +657,7 @@ GameObject:
   - component: {fileID: 694982940}
   - component: {fileID: 694982939}
   - component: {fileID: 694982938}
+  - component: {fileID: 694982941}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -723,6 +723,23 @@ Transform:
   - {fileID: 330585546}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &694982941
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 694982937}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4da41a6fc7929e14faa5ec3e74b30f66, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FloorMarker
+  primaryColor: {r: 1, g: 0.75, b: 0, a: 1}
+  secondaryColor: {r: 1, g: 0, b: 0, a: 1}
+  cellSize: 2
+  maxReach: 4
+  cameraTransform: {fileID: 330585546}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1267,9 +1284,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b86856dd4cd79b4ba8bc9a6fd989f2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MazeGenerator
-  gridSize: 21
+  gridSize: 32
   cellSize: 2
+  secondsPerStep: 0.6
+  simulationRuns: 200
+  visualize: 0
+  stepDelay: 0.05
+  algorithm:
+    rid: 6834422527788056576
   player: {fileID: 694982937}
+  references:
+    version: 2
+    RefIds:
+    - rid: 6834422527788056576
+      type: {class: WilsonAlgorithm, ns: , asm: Assembly-CSharp}
+      data: 
 --- !u!1 &1454913129
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,5 +1,8 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 [System.Serializable]
 public class PrimsAlgorithm : MazeAlgorithm
@@ -41,6 +44,40 @@ public class PrimsAlgorithm : MazeAlgorithm
         }
 
         return isWall;
+    }
+
+    public override IEnumerator GenerateAnimated(int gridSize, bool[,] isWall, float stepDelay, Action<int, int> onCarve)
+    {
+        bool[,] inMaze = new bool[gridSize, gridSize];
+        int[] dr = { -2, 2, 0, 0 };
+        int[] dc = { 0, 0, -2, 2 };
+
+        int startR = 1 + Random.Range(0, (gridSize - 1) / 2) * 2;
+        int startC = 1 + Random.Range(0, (gridSize - 1) / 2) * 2;
+        inMaze[startR, startC] = true;
+        isWall[startR, startC] = false;
+        onCarve(startR, startC);
+
+        List<(Vector2Int wall, Vector2Int cell)> frontier = new List<(Vector2Int, Vector2Int)>();
+        AddFrontier(startR, startC, gridSize, inMaze, frontier, dr, dc);
+
+        while (frontier.Count > 0)
+        {
+            int idx = Random.Range(0, frontier.Count);
+            var (wall, cell) = frontier[idx];
+            frontier.RemoveAt(idx);
+
+            if (inMaze[cell.x, cell.y]) continue;
+
+            inMaze[cell.x, cell.y] = true;
+            isWall[cell.x, cell.y] = false;
+            onCarve(cell.x, cell.y);
+            isWall[wall.x, wall.y] = false;
+            onCarve(wall.x, wall.y);
+
+            AddFrontier(cell.x, cell.y, gridSize, inMaze, frontier, dr, dc);
+            yield return new WaitForSeconds(stepDelay);
+        }
     }
 
     private void AddFrontier(int r, int c, int gridSize, bool[,] inMaze,

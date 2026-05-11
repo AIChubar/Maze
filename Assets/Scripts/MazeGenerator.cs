@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,6 +13,10 @@ public class MazeGenerator : MonoBehaviour
     [SerializeField] private float secondsPerStep = 0.6f;
     [SerializeField] private int simulationRuns = 200;
 
+    [Header("Visualization")]
+    [SerializeField] private bool visualize;
+    [SerializeField] private float stepDelay = 0.05f;
+
     [SerializeReference] private MazeAlgorithm algorithm = new WilsonAlgorithm();
 
     [Header("References")]
@@ -19,13 +24,48 @@ public class MazeGenerator : MonoBehaviour
 
     private bool[,] _isWall;
     private Vector2Int _exitCell;
+    private GameObject[,] _wallCubes;
+    private bool _wallsReady;
 
     private void Start()
     {
         Run();
     }
 
+    public void FillWalls()
+    {
+        StopAllCoroutines();
+        CleanScene();
+
+        _isWall = new bool[gridSize, gridSize];
+        for (int r = 0; r < gridSize; r++)
+            for (int c = 0; c < gridSize; c++)
+                _isWall[r, c] = true;
+
+        BuildAnimatedWalls();
+        _wallsReady = true;
+    }
+
     public void Regenerate()
+    {
+        StopAllCoroutines();
+
+        if (visualize && _wallsReady)
+        {
+            _wallsReady = false;
+            for (int r = 0; r < gridSize; r++)
+                for (int c = 0; c < gridSize; c++)
+                    _isWall[r, c] = true;
+            StartCoroutine(RunAnimated(skipBuild: true));
+            return;
+        }
+
+        _wallsReady = false;
+        CleanScene();
+        Run();
+    }
+
+    private void CleanScene()
     {
         foreach (Transform child in transform)
             Destroy(child.gameObject);
@@ -33,18 +73,45 @@ public class MazeGenerator : MonoBehaviour
         ExitTrigger existingExit = FindFirstObjectByType<ExitTrigger>();
         if (existingExit != null)
             Destroy(existingExit.gameObject);
-
-        Run();
     }
 
     private void Run()
     {
+        if (visualize)
+            StartCoroutine(RunAnimated());
+        else
+            RunInstant();
+    }
+
+    private void RunInstant()
+    {
         GenerateMaze();
+        BuildGeometry();
+        FinishGeneration();
+    }
+
+    private IEnumerator RunAnimated(bool skipBuild = false)
+    {
+        if (!skipBuild)
+        {
+            _isWall = new bool[gridSize, gridSize];
+            for (int r = 0; r < gridSize; r++)
+                for (int c = 0; c < gridSize; c++)
+                    _isWall[r, c] = true;
+
+            BuildAnimatedWalls();
+        }
+
+        yield return algorithm.GenerateAnimated(gridSize, _isWall, stepDelay, OnCarve);
+        FinishGeneration();
+    }
+
+    private void FinishGeneration()
+    {
         _exitCell = FindFarthestCell();
         float timeLimit = RunAgentSimulations(simulationRuns) * secondsPerStep;
         GameManager.Instance.StartGame(timeLimit);
         LogMazeSchema();
-        BuildGeometry();
         PlaceActors();
     }
 
@@ -174,6 +241,34 @@ public class MazeGenerator : MonoBehaviour
         return farthest;
     }
 
+    private void BuildAnimatedWalls()
+    {
+        float half = (gridSize - 1) * cellSize * 0.5f;
+        CreatePlane(new Vector3(half, 0f, half), new Color(0.25f, 0.15f, 0.08f), false);
+
+        Material wallMat = MakeMaterial(new Color(0.3f, 0.3f, 0.35f));
+        GameObject wallParent = new GameObject("Walls");
+        wallParent.transform.SetParent(transform);
+
+        _wallCubes = new GameObject[gridSize, gridSize];
+        for (int r = 0; r < gridSize; r++)
+            for (int c = 0; c < gridSize; c++)
+            {
+                GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                wall.transform.SetParent(wallParent.transform);
+                wall.transform.position = new Vector3(c * cellSize, 1.5f, r * cellSize);
+                wall.transform.localScale = new Vector3(cellSize, 3f, cellSize);
+                wall.GetComponent<Renderer>().sharedMaterial = wallMat;
+                _wallCubes[r, c] = wall;
+            }
+    }
+
+    private void OnCarve(int r, int c)
+    {
+        Destroy(_wallCubes[r, c]);
+        _wallCubes[r, c] = null;
+    }
+
     private void BuildGeometry()
     {
         float half = (gridSize - 1) * cellSize * 0.5f;
@@ -214,6 +309,7 @@ public class MazeGenerator : MonoBehaviour
         cc.enabled = false;
         player.transform.position = new Vector3(cellSize, 1f, cellSize);
         cc.enabled = true;
+
 
         GameObject exit = GameObject.CreatePrimitive(PrimitiveType.Cube);
         exit.transform.position = new Vector3(_exitCell.y * cellSize, 1f, _exitCell.x * cellSize);

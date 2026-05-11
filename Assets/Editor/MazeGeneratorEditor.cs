@@ -30,6 +30,8 @@ public class MazeGeneratorEditor : Editor
 
         if (!Application.isPlaying) return;
         EditorGUILayout.Space();
+        if (GUILayout.Button("Fill Walls"))
+            ((MazeGenerator)target).FillWalls();
         if (GUILayout.Button("Regenerate Maze"))
             ((MazeGenerator)target).Regenerate();
     }
