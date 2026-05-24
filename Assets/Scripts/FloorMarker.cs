@@ -10,7 +10,7 @@ public class FloorMarker : MonoBehaviour
 
     [SerializeField] private Color primaryColor = new Color(1f, 0.75f, 0f);
     [SerializeField] private Color secondaryColor = Color.red;
-    [SerializeField] private float cellSize = 2f;
+    [SerializeField] private float cellSize = 3f;
     [SerializeField] private float maxReach = 4f;
     [SerializeField] private float paintDuration = 0.35f;
     [SerializeField] private bool animatePaint = true;

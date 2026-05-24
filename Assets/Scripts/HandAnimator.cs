@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 public class HandAnimator : MonoBehaviour
 {
@@ -47,7 +48,9 @@ public class HandAnimator : MonoBehaviour
         armMesh.transform.localPosition = Vector3.zero;
         armMesh.transform.localRotation = Quaternion.identity;
         armMesh.transform.localScale = new Vector3(0.11f, 0.09f, 0.32f);
-        armMesh.GetComponent<Renderer>().material = MakeSkinMat();
+        MeshRenderer armRenderer = armMesh.GetComponent<MeshRenderer>();
+        armRenderer.material = MakeSkinMat();
+        armRenderer.shadowCastingMode = ShadowCastingMode.Off;
 
         // Fist on top
         GameObject fist = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -56,7 +59,9 @@ public class HandAnimator : MonoBehaviour
         fist.transform.localPosition = new Vector3(0f, 0.01f, 0.18f);
         fist.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
         fist.transform.localScale = new Vector3(0.12f, 0.10f, 0.14f);
-        fist.GetComponent<Renderer>().material = MakeSkinMat();
+        MeshRenderer fistRenderer = fist.GetComponent<MeshRenderer>();
+        fistRenderer.material = MakeSkinMat();
+        fistRenderer.shadowCastingMode = ShadowCastingMode.Off;
 
         return arm.transform;
     }

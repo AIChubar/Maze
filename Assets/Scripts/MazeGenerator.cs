@@ -9,7 +9,7 @@ public class MazeGenerator : MonoBehaviour
 
     [Header("Settings")]
     [SerializeField] private int gridSize = 21;
-    [SerializeField] private float cellSize = 2f;
+    [SerializeField] private float cellSize = 3f;
     [SerializeField] private float secondsPerStep = 0.6f;
     [SerializeField] private int simulationRuns = 200;
 
@@ -129,7 +129,7 @@ public class MazeGenerator : MonoBehaviour
         for (int r = 0; r < gridSize; r++)
             for (int c = 0; c < gridSize; c++)
                 if (!_isWall[r, c]) paintable++;
-        floorMarker.SetMarkLimit(Mathf.RoundToInt(paintable / 10f / 10f) * 10);
+        floorMarker.SetMarkLimit(Mathf.Max(1, paintable / 8));
     }
 
     private void LogMazeSchema()
